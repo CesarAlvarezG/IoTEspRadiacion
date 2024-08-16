@@ -1,11 +1,9 @@
 #include "DHT.h"
-//#include <Wire.h>
-//#include "SSD1306Wire.h"   
-
-//SSD1306Wire display(0x3c, SDA, SCL); 
 
 #define DTHPIN 17
 #define DTHTYPE DHT11
+
+#define TACTULIZACION 1000
 
 DHT dht(DTHPIN, DTHTYPE);
 String consola;
@@ -21,19 +19,21 @@ void setup() {
   Serial.println("Auramaria Londoño Cano");   
 
   dht.begin();
-  consola="[%]\t[°C]";
+  consola="[°C]\t[%]";
   Serial.println(consola);
 }
 
 // the loop function runs over and over again forever
 void loop() {
 
-  h=dht.readHumidity();
+  
   t=dht.readTemperature();
-  consola=h;
+  h=dht.readHumidity();
+  consola=t;
   consola+="\t";
-  consola+=t;
+  consola+=h;
+  
   Serial.println(consola);
-  delay(1000);
+  delay(TACTULIZACION);
 
 }
