@@ -2,6 +2,8 @@
 #include <WiFi.h>
 #include "secrets.h"
 #include "ThingSpeak.h" // always include thingspeak header file after other header files and custom macros
+#include <Adafruit_Sensor.h>
+#include "Adafruit_TSL2591.h"
 
 char ssid[] = SECRET_SSID;   // your network SSID (name) 
 char pass[] = SECRET_PASS;   // your network password
@@ -22,7 +24,10 @@ DHT dht(DTHPIN, DTHTYPE);
 String consola;
 float h=0;//Humedad
 float t=0;//Temperatura
+float Irr=0;//Irradiación solar
 int paquetes=0;//Datos enviados
+
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
 
 void setup() {
@@ -36,8 +41,30 @@ void setup() {
   WiFi.mode(WIFI_STA);   
   ThingSpeak.begin(client);  
 
+  if (tsl.begin()) 
+  {
+    Serial.println(F("Found a TSL2591 sensor"));
+  } 
+  else 
+  {
+    Serial.println(F("No sensor found ... check your wiring?"));
+    while (1);
+  }
+  tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+  tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+  
   dht.begin();
-  consola="[°C]\t[%]";
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(SECRET_SSID);
+    while(WiFi.status() != WL_CONNECTED){
+      WiFi.begin(ssid, pass);  // Connect to WPA/WPA2 network. Change this line if using open or WEP network
+      Serial.print(".");
+      delay(5000);     
+    } 
+    Serial.println("\nConnected.");
+  }
+  consola="[n]\t[°C]\t[%]\t[W/m2]\tStatus";
   Serial.println(consola);
 }
 
@@ -57,20 +84,32 @@ void loop() {
 
   t=dht.readTemperature();
   h=dht.readHumidity();
-  consola=t;
+  uint16_t q = tsl.getLuminosity(TSL2591_FULLSPECTRUM);
+  Irr=q/685;//Conversión de Lux a W/m2
+  consola=paquetes;
+  consola+="\t";
+  consola+=t;
   consola+="\t";
   consola+=h;
+  consola+="\t";
+  consola+=Irr;
+  
   
   // set the fields with the values
   ThingSpeak.setField(1, paquetes++);
   ThingSpeak.setField(2, t);
   ThingSpeak.setField(3, h);
+  ThingSpeak.setField(4, Irr);
   int x = ThingSpeak.writeFields(myChannelNumber, myWriteAPIKey);
   if(x == 200){
-    Serial.println("Channel update successful.");
+    //Serial.println("Channel update successful.");
+    consola+="\t";
+    consola+="Up";
   }
   else{
-    Serial.println("Problem updating channel. HTTP error code " + String(x));
+    //Serial.println("Problem updating channel. HTTP error code " + String(x));
+    consola+="\t";
+    consola+="down:" + String(x);
   }
 
   Serial.println(consola);
