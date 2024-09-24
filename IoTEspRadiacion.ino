@@ -13,7 +13,7 @@ WiFiClient  client;
 unsigned long myChannelNumber = SECRET_CH_ID;
 const char * myWriteAPIKey = SECRET_WRITE_APIKEY;
 
-
+int red=0;//Estado de la red
 
 #define DTHPIN 17
 #define DTHTYPE DHT11
@@ -37,33 +37,58 @@ void setup() {
   Serial.println("Año 2024"); 
   Serial.println("Cesar Augusto Alvarez Gaspar");
   Serial.println("Auramaria Londoño Cano");   
-
-  WiFi.mode(WIFI_STA);   
-  ThingSpeak.begin(client);  
-
-  if (tsl.begin()) 
-  {
-    Serial.println(F("Found a TSL2591 sensor"));
-  } 
-  else 
-  {
-    Serial.println(F("No sensor found ... check your wiring?"));
-    while (1);
-  }
-  tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
-  tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
   
-  dht.begin();
   if(WiFi.status() != WL_CONNECTED){
-    Serial.print("Attempting to connect to SSID: ");
+    Serial.print("\nConectando a red SSID: ");
     Serial.println(SECRET_SSID);
     while(WiFi.status() != WL_CONNECTED){
       WiFi.begin(ssid, pass);  // Connect to WPA/WPA2 network. Change this line if using open or WEP network
       Serial.print(".");
       delay(5000);     
     } 
-    Serial.println("\nConnected.");
+    Serial.println("\nConectado.");
   }
+  
+  consola="Estado General\n";
+  Serial.println(consola);
+  consola="DTH111\tTSL2591\tRed";
+  Serial.println(consola);
+  
+  WiFi.mode(WIFI_STA);   
+  ThingSpeak.begin(client);  
+  
+  dht.begin();
+  t=dht.readTemperature();
+  h=dht.readHumidity();
+  if (isnan(h) || isnan(t)) {
+    consola="dowm";
+  }else{
+      consola ="Up";
+    }
+  if (tsl.begin()) 
+  {
+    consola+="\t";
+    consola+="Up";
+  } 
+  else 
+  {
+    consola+="\t";
+    consola+="Down";
+  }
+  tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+  tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+  
+  consola+="\t";
+  if(WiFi.status() != WL_CONNECTED)
+  {
+    consola+="Down";
+  }else{
+        consola+="Up";
+    }
+  
+  Serial.println(consola);
+  
+  Serial.println("\n");
   consola="[n]\t[°C]\t[%]\t[W/m2]\tStatus";
   Serial.println(consola);
 }
